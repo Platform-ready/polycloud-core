@@ -1,16 +1,20 @@
-# Multi-stage build for frontend + backend
-FROM node:18 AS frontend-build
-WORKDIR /app
-COPY frontend/ .
-RUN npm install && npm run build
+# Stage 1: dummy backend
+FROM openjdk:17-jdk-alpine AS backend-build
 
-FROM golang:1.21 AS backend-build
+# Create dummy app
 WORKDIR /app
-COPY backend/ .
-RUN go mod tidy && go build -o server ./cmd/server
+RUN echo 'public class Main { public static void main(String[] args) { System.out.println("Hello PolyCloud!"); } }' > Main.java
+RUN javac Main.java
 
-FROM nginx:alpine
-COPY --from=frontend-build /app/dist /usr/share/nginx/html
-COPY --from=backend-build /app/server /server
-EXPOSE 80
-CMD ["/server"]
+# Stage 2: dummy frontend
+FROM node:18-alpine AS frontend-build
+WORKDIR /app
+RUN mkdir -p src
+RUN echo 'console.log("Dummy frontend built");' > src/index.js
+
+# Stage 3: final image
+FROM alpine:latest
+WORKDIR /app
+COPY --from=backend-build /app/Main.class .
+COPY --from=frontend-build /app/src /app/frontend
+CMD ["echo", "PolyCloud dummy image ready!"]
