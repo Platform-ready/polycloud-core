@@ -1,0 +1,2 @@
+# polycloud-core
+Core application
